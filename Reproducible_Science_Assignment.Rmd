@@ -1,0 +1,174 @@
+---
+title: "Reproducible_Science_Assignment"
+output: html_document
+embed-resources: true 
+---
+```{r}
+suppressMessages(library(tidyverse))
+suppressMessages(library(palmerpenguins))
+suppressMessages(library(ggplot2))
+suppressMessages(library(janitor))
+suppressMessages(library(here))
+suppressMessages(library(tidyr))
+renv::snapshot()
+```
+
+
+## QUESTION 01: Data Visualisation for Science Communication
+
+*Create a figure using the Palmer Penguin dataset that is correct but badly communicates the data. **Do not make a boxplot**.*
+
+*Use the following references to guide you:*
+
+-   [*https://www.nature.com/articles/533452a*](https://www.nature.com/articles/533452a){.uri}
+-   [*https://elifesciences.org/articles/16800*](https://elifesciences.org/articles/16800){.uri}
+
+*Note: Focus on visual elements rather than writing misleading text on it.*
+
+```{r}
+names(penguins_raw)
+```
+```{r}
+head(penguins_raw)
+penguins_raw
+```
+
+```{r}
+write.csv(penguins_raw, here("data", "penguins_raw.csv"))
+```
+
+```{r}
+cleaning_penguins_function <- function(raw_data) {
+  raw_data %>%
+    remove_empty(c("rows", "cols")) %>% 
+    clean_names() %>%
+    drop_na(culmen_length_mm, body_mass_g) %>%
+    mutate(species = case_when(
+      species == "Adelie Penguin (Pygoscelis adeliae)" ~ "Adelie",
+      species == "Chinstrap penguin (Pygoscelis antarctica)" ~ "Chinstrap",
+      species == "Gentoo penguin (Pygoscelis papua)" ~ "Gentoo"
+    )) 
+}
+```
+
+```{r}
+penguins_clean <- cleaning_penguins_function(penguins_raw)
+```
+
+
+```{r}
+names(penguins_clean)
+```
+
+```{r}
+write.csv(penguins_clean, here("data", "penguins_clean.csv"))
+```
+
+### a) Provide your figure here:
+
+```{r}
+# Creating a subset of the data
+penguin_culmen_length <- penguins_clean %>% 
+  select(species, culmen_length_mm)
+
+head(penguin_culmen_length)
+```
+
+
+```{r bad figure code, echo=FALSE}
+# There is no need to provide the code for your bad figure, just use echo=FALSE so the code is hidden. Make sure your figure is visible after you knit it. 
+Fig1 <- penguin_culmen_length |>
+  ggplot() +
+  geom_histogram(aes(x = culmen_length_mm), binwidth = 0.05) +
+  facet_wrap(~ species, ncol = 1) + xlab("Culmen length (mm)") +
+  ylab("Count")
+Fig1
+```
+
+### b) Write about how your design choices mislead the reader about the underlying data (200-300 words).
+
+*Include references.*
+
+------------------------------------------------------------------------
+
+## QUESTION 2: Data Pipeline
+
+*Write a data analysis pipeline in your .rmd RMarkdown file. You should be aiming to write a clear explanation of the steps, the figures visible, as well as clear code.*
+
+### Introduction
+We are interested in whether three different penguin species in the *Pygoscelis* genus have different body weights. 
+
+```{r}
+# Creating a subset of the data
+penguin_body_mass <- penguins_clean %>% 
+  select(species, body_mass_g)
+
+head(penguin_body_mass)
+```
+
+
+```{r Data Exploration}
+Fig2 <- penguin_body_mass |>
+  ggplot(aes(x = species, y = body_mass_g, fill = species)) +
+  geom_violin() +
+  xlab("Penguin species") + ylab("Body mass (g)") +
+  stat_summary(fun = mean, geom = "point", color = "black")
+Fig2
+```
+
+### Hypothesis
+
+### Statistical Methods
+
+```{r Statistics}
+
+# Make sure your code prints. 
+
+```
+
+### Results & Discussion
+
+```{r Plotting Results}
+
+# Make sure your code prints. 
+
+```
+
+### Conclusion
+
+------------------------------------------------------------------------
+
+## QUESTION 3: Open Science
+
+### a) GitHub
+
+*Upload your RProject you created for **Question 2** and any files and subfolders used to GitHub. Do not include any identifiers such as your name. Make sure your GitHub repo is public.*
+
+*GitHub link:*
+
+*You will be marked on your repo organisation and readability.*
+
+### b) Share your repo with a partner, download, and try to run their data pipeline.
+
+*Partner's GitHub link:*
+
+*You **must** provide this so I can verify there is no plagiarism between you and your partner.*
+
+### c) Reflect on your experience running their code. (300-500 words)
+
+-   *What elements of your partner's code helped you to understand their data pipeline?*
+
+-   *Did it run? Did you need to fix anything?*
+
+-   *What suggestions would you make for improving their code to make it more understandable or reproducible, and why?*
+
+-   *If you needed to alter your partner's figure using their code, do you think that would be easy or difficult, and why?*
+
+### d) Reflect on your own code based on your experience with your partner's code and their review of yours. (300-500 words)
+
+-   *What improvements did they suggest, and do you agree?*
+
+-   *What did you learn about writing code for other people?*
+
+
+

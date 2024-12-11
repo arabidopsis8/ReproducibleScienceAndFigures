@@ -106,7 +106,6 @@ penguin_body_mass <- penguins_clean %>%
 head(penguin_body_mass)
 ```
 
-
 ```{r Data Exploration}
 Fig2 <- penguin_body_mass |>
   ggplot(aes(x = species, y = body_mass_g, fill = species)) +
@@ -117,16 +116,49 @@ Fig2
 ```
 
 ### Hypothesis
+H~0~: There is no difference in the mean body masses of the Adelie, Chinstrap, and Gentoo penguins.
+H~A~: At least one penguin species has a different body mass. 
 
 ### Statistical Methods
+A single-factor ANOVA will be used to compare the mean body masses of the three penguin species. 
+
+### Checking assumptions
+The assumptions of ANOVA are that:
+1) The variable must be normally distributed in each of the populations.
+2) The variance must be the same in each of the populations.
+
+##### 1)Checking that body mass is normally distributed in each penguin species
+
+```{r}
+Fig3 <- penguin_body_mass |>
+  ggplot() +
+  geom_histogram(aes(x = body_mass_g), binwidth = 200) +
+  facet_wrap(~ species, ncol = 1)
+Fig3
+```
+The multiple histogram shows that the body masses of the penguins in each of the populations is approximately normally distributed. There is no extreme skew, extreme outliers, or extreme bimodality. 
+
+##### 2) Checking that variance is equal in each of the penguin populations
+
+```{r}
+penguin_body_mass_by_species <- group_by(penguin_body_mass, species)
+summarise(penguin_body_mass_by_species, group_variance = var(body_mass_g, na.rm = TRUE))
+```
+The variances are also similar enough. 
+It is appropriate to analyse this data using ANOVA. 
+
+#### ANOVA will be performed using linear model analysis
 
 ```{r Statistics}
-
-# Make sure your code prints. 
-
+penguin_body_mass_ANOVA <- lm(body_mass_g ~ species, data = penguin_body_mass)
 ```
 
 ### Results & Discussion
+
+```{r}
+anova(penguin_body_mass_ANOVA)
+```
+
 
 ```{r Plotting Results}
 

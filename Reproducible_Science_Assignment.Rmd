@@ -4,40 +4,29 @@ output: html_document
 embed-resources: true 
 ---
 ```{r}
+# Loading packages
 suppressMessages(library(tidyverse))
 suppressMessages(library(palmerpenguins))
 suppressMessages(library(ggplot2))
 suppressMessages(library(janitor))
 suppressMessages(library(here))
 suppressMessages(library(tidyr))
+suppressMessages(library(arm))
 renv::snapshot()
 ```
 
-
-## QUESTION 01: Data Visualisation for Science Communication
-
-*Create a figure using the Palmer Penguin dataset that is correct but badly communicates the data. **Do not make a boxplot**.*
-
-*Use the following references to guide you:*
-
--   [*https://www.nature.com/articles/533452a*](https://www.nature.com/articles/533452a){.uri}
--   [*https://elifesciences.org/articles/16800*](https://elifesciences.org/articles/16800){.uri}
-
-*Note: Focus on visual elements rather than writing misleading text on it.*
-
 ```{r}
-names(penguins_raw)
-```
-```{r}
+# Loading raw data
 head(penguins_raw)
-penguins_raw
 ```
 
 ```{r}
+# Saving raw data
 write.csv(penguins_raw, here("data", "penguins_raw.csv"))
 ```
 
 ```{r}
+# Making a cleaning function to clean the penguin data
 cleaning_penguins_function <- function(raw_data) {
   raw_data %>%
     remove_empty(c("rows", "cols")) %>% 
@@ -52,24 +41,26 @@ cleaning_penguins_function <- function(raw_data) {
 ```
 
 ```{r}
+# Applying cleaning function to the penguin data
 penguins_clean <- cleaning_penguins_function(penguins_raw)
 ```
 
 
 ```{r}
-names(penguins_clean)
-```
-
-```{r}
+# Saving the clean data
 write.csv(penguins_clean, here("data", "penguins_clean.csv"))
 ```
+
+## QUESTION 01: Data Visualisation for Science Communication
+
+*Create a figure using the Palmer Penguin dataset that is correct but badly communicates the data. **Do not make a boxplot**.*
 
 ### a) Provide your figure here:
 
 ```{r}
-# Creating a subset of the data
-penguin_culmen_length <- penguins_clean %>% 
-  select(species, culmen_length_mm)
+# Creating a subset of the data for Question 1
+penguin_culmen_length <- penguins_clean %>%
+  dplyr::select(species, culmen_length_mm)
 
 head(penguin_culmen_length)
 ```
@@ -93,61 +84,75 @@ Fig1
 
 ## QUESTION 2: Data Pipeline
 
-*Write a data analysis pipeline in your .rmd RMarkdown file. You should be aiming to write a clear explanation of the steps, the figures visible, as well as clear code.*
-
 ### Introduction
-We are interested in whether three different penguin species in the *Pygoscelis* genus have different body weights. 
+We have morphological data on three penguin species: *Pygoscelis adelie* (Adelie), *P. antarctica* (Chinstrap), and *P. papua* (Gentoo). We are interested in whether these three penguin species in the *Pygoscelis* genus have different body weights. 
+
+We have already cleaned our data, and so we are working with the 'penguins_clean' data
 
 ```{r}
-# Creating a subset of the data
+# Creating a subset of the data for Question 2
 penguin_body_mass <- penguins_clean %>% 
-  select(species, body_mass_g)
-
-head(penguin_body_mass)
+  dplyr::select(species, body_mass_g)
 ```
-
 ```{r Data Exploration}
+# Exploring the data
+species_colours <- c("Adelie" = "darkorange",
+                     "Chinstrap" = "purple",
+                     "Gentoo" = "cyan4")
+
 Fig2 <- penguin_body_mass |>
-  ggplot(aes(x = species, y = body_mass_g, fill = species)) +
+  ggplot(aes(x = species, y = body_mass_g)) +
   geom_violin() +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  geom_jitter(aes(color = species), alpha = 0.25, position = position_jitter(width = 0.4, seed = 0)) +
   xlab("Penguin species") + ylab("Body mass (g)") +
-  stat_summary(fun = mean, geom = "point", color = "black")
+  scale_color_manual(values = species_colours) + theme_bw()
 Fig2
 ```
-
-### Hypothesis
-H~0~: There is no difference in the mean body masses of the Adelie, Chinstrap, and Gentoo penguins.
-H~A~: At least one penguin species has a different body mass. 
+**Figure 2: Visualising the body mass data for the three penguin species using a violin plot**
 
 ### Statistical Methods
-A single-factor ANOVA will be used to compare the mean body masses of the three penguin species. 
+A single-factor ANOVA will be used to compare the mean body masses of the three penguin species.
+
+ANOVA is a linear model and so linear model analysis will be performed using the `lm()` function. `anova()` will then be used to assess the output. 
+
+##### Hypothesis
+**H~0~:** There is no difference in the mean body masses of the Adelie, Chinstrap, and Gentoo penguin species.
+
+**H~A~:** At least one penguin species has a different body mass. 
+
 
 ### Checking assumptions
 The assumptions of ANOVA are that:
-1) The variable must be normally distributed in each of the populations.
-2) The variance must be the same in each of the populations.
 
-##### 1)Checking that body mass is normally distributed in each penguin species
+1) The variable must be normally distributed in each of the groups.
+
+2) The variance must be the same in each of the groups.
 
 ```{r}
+# 1) Assessing normal distribution
 Fig3 <- penguin_body_mass |>
   ggplot() +
   geom_histogram(aes(x = body_mass_g), binwidth = 200) +
-  facet_wrap(~ species, ncol = 1)
+  facet_wrap(~ species, ncol = 1) +
+  xlab("Body mass (g)") + ylab("Frequency") +
+  theme_bw()
 Fig3
 ```
-The multiple histogram shows that the body masses of the penguins in each of the populations is approximately normally distributed. There is no extreme skew, extreme outliers, or extreme bimodality. 
+**Figure 3: A multiple histogram displaying the frequency distributions of the body masses for the three penguin species.**
 
-##### 2) Checking that variance is equal in each of the penguin populations
+The multiple histogram shows that the body masses of the penguins in each group is approximately normally distributed. There is no extreme skew, extreme outliers, or extreme bimodality. 
 
 ```{r}
+# 2) Assessing equal variances
 penguin_body_mass_by_species <- group_by(penguin_body_mass, species)
 summarise(penguin_body_mass_by_species, group_variance = var(body_mass_g, na.rm = TRUE))
 ```
-The variances are also similar enough. 
-It is appropriate to analyse this data using ANOVA. 
+The variances returned in this table are similar enough. 
 
-#### ANOVA will be performed using linear model analysis
+The assumptions of normality and equal variance are met and therefore it is appropriate to analyse this data using ANOVA. 
+
+### Performing linear model analysis
 
 ```{r Statistics}
 penguin_body_mass_ANOVA <- lm(body_mass_g ~ species, data = penguin_body_mass)
@@ -156,17 +161,49 @@ penguin_body_mass_ANOVA <- lm(body_mass_g ~ species, data = penguin_body_mass)
 ### Results & Discussion
 
 ```{r}
+display(penguin_body_mass_ANOVA)
+```
+This table tells us what the mean body mass is for each penguin species.
+
+```{r}
+confint(penguin_body_mass_ANOVA)
+```
+
+This table gives us the confidence intervals.
+
+```{r}
 anova(penguin_body_mass_ANOVA)
 ```
+The **p-value of 2.2 x10^-16^ is < 0.05**, and therefore we can **reject the null hypothesis** that there is no difference in the mean body masses of the different penguin species. 
+
+We will now perform a Tukey-Kramer test, an unplanned comparison method, to investigate *which* of the penguin species have significantly different mean body masses. 
+
+```{r}
+# Performing Tukey-Kramer unplanned comparison
+TukeyHSD(aov(penguin_body_mass_ANOVA))
+```
+The p-values from this analysis show that it is only the Gentoo penguin species that has a significantly different body mass. 
 
 
 ```{r Plotting Results}
+# Plotting results figure
+data_frame <- data.frame(group = c("Adelie", "Chinstrap", "Gentoo"),
+                         mean = c(3700.66, 3733.09, 5076.01),
+                         ymins = c(3626.7, 3526.3, 4891.6),
+                         ymaxs = c(3774.7, 3939.9, 5260.5))
 
-# Make sure your code prints. 
-
+ggplot(data_frame, aes(x = group, y = mean)) +
+  geom_point(size = 3, color = species_colours) +
+  geom_errorbar(aes(ymin = ymins, ymax = ymaxs), size = 1.5, color = species_colours) +
+  xlab("Penguin species") + ylab("Body mass (g)") +
+  scale_color_manual(values = species_colours) +
+  theme_bw()
 ```
+**Figure 4: Results figure illustrating that the Gentoo penguin species has a significantly greater body mass than the Adelie and Chinstrap penguins.**
 
 ### Conclusion
+
+We can conclude from this linear model analysis of the Palmer Penguin data that there are differences in body mass among the penguin species in the *Pygoscelis* genus. The Gentoo penguin (*P. papua*) has a significantly greater body mass than the Adelie and Chinstrap penguins. This fits with the exploratory violin plot, however we needed to conduct a single-factor ANOVA because the sample of Penguins in the Palmer Penguin data set will differ from the population by chance. 
 
 ------------------------------------------------------------------------
 

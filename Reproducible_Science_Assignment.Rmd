@@ -57,28 +57,39 @@ write.csv(penguins_clean, here("data", "penguins_clean.csv"))
 
 ### a) Provide your figure here:
 
-```{r}
-# Creating a subset of the data for Question 1
-penguin_culmen_length <- penguins_clean %>%
-  dplyr::select(species, culmen_length_mm)
-
-head(penguin_culmen_length)
-```
-
-
 ```{r bad figure code, echo=FALSE}
 # There is no need to provide the code for your bad figure, just use echo=FALSE so the code is hidden. Make sure your figure is visible after you knit it. 
-Fig1 <- penguin_culmen_length |>
-  ggplot() +
-  geom_histogram(aes(x = culmen_length_mm), binwidth = 0.05) +
-  facet_wrap(~ species, ncol = 1) + xlab("Culmen length (mm)") +
-  ylab("Count")
+misleading_species_colours <- c("Adelie" = "lightsalmon",
+                     "Chinstrap" = "darksalmon",
+                     "Gentoo" = "firebrick")
+
+
+Fig1 <- penguins_clean |>
+  ggplot(aes(x = species, y = body_mass_g, fill = species))+
+  stat_summary(fun = "mean", geom = "bar") +
+  coord_cartesian(ylim = c(3500, 5250)) +
+  xlab("Penguin species") + ylab("Mean body mass (g)") +
+    scale_fill_manual(values = misleading_species_colours) +
+  theme_classic()
+  
 Fig1
+
 ```
+
+**Figure 1: A misleading bar graph for data on the body masses of penguin species**
 
 ### b) Write about how your design choices mislead the reader about the underlying data (200-300 words).
 
-*Include references.*
+The role of this bar graph is to illustrate the differences in body mass between the three penguin species (Adelie, Chinstrap, and Gentoo). However, this bar graph misleads the reader about the significance of the body mass difference between the Gentoo penguin species and the other two species.
+
+Firstly, I have manipulated the y-axis so that it does not start at 0 grams but instead at 3500 grams. In the Palmer Penguins dataset, the Gentoo penguin species does have a greater mean body mass than the Adelie and Chinstrap penguin species, but manipulating the y-axis in this way misleads readers about the magnitude of this difference. 
+The magnitude of the difference in mean body mass is also visually exaggerated with the colour scheme. Similar pale red colours are used for the Adelie and Chinstrap penguin species but a darker, brighter red is used for the Gentoo penguin species, which makes this bar stand out even more from the other two. 
+
+This graph is also misleading and badly communicates the data because the bars only show the mean body mass value for each penguin species. Failing to show the data can mislead the reader because they do not have a visual representation of the spread of data points and outliers (Whitlock and Schluter, 2020). A good graph would instead represent this data as a strip chart or violin plot. In general, because bar graphs do not show the individual data points, they should only be used for displaying a categorical variables and not the relationship between a categorical and numerical variable (Weissgerber et al, 2015). 
+
+Finally, I used the classic theme on ggplot2, which does not have grid lines, and so it is harder to relate the body masses on the y-axis to the bars. 
+
+(Bibliography at end of file)
 
 ------------------------------------------------------------------------
 
@@ -94,6 +105,7 @@ We have already cleaned our data, and so we are working with the 'penguins_clean
 penguin_body_mass <- penguins_clean %>% 
   dplyr::select(species, body_mass_g)
 ```
+
 ```{r Data Exploration}
 # Exploring the data
 species_colours <- c("Adelie" = "darkorange",
@@ -109,6 +121,7 @@ Fig2 <- penguin_body_mass |>
   scale_color_manual(values = species_colours) + theme_bw()
 Fig2
 ```
+
 **Figure 2: Visualising the body mass data for the three penguin species using a violin plot**
 
 ### Statistical Methods
@@ -116,7 +129,7 @@ A single-factor ANOVA will be used to compare the mean body masses of the three 
 
 ANOVA is a linear model and so linear model analysis will be performed using the `lm()` function. `anova()` will then be used to assess the output. 
 
-##### Hypothesis
+##### Hypotheses
 **H~0~:** There is no difference in the mean body masses of the Adelie, Chinstrap, and Gentoo penguin species.
 
 **H~A~:** At least one penguin species has a different body mass. 
@@ -133,24 +146,29 @@ The assumptions of ANOVA are that:
 # 1) Assessing normal distribution
 Fig3 <- penguin_body_mass |>
   ggplot() +
-  geom_histogram(aes(x = body_mass_g), binwidth = 200) +
+  geom_histogram(aes(x = body_mass_g, fill = species), binwidth = 200) +
   facet_wrap(~ species, ncol = 1) +
   xlab("Body mass (g)") + ylab("Frequency") +
+  scale_fill_manual(values = species_colours) +
   theme_bw()
 Fig3
 ```
+
 **Figure 3: A multiple histogram displaying the frequency distributions of the body masses for the three penguin species.**
 
-The multiple histogram shows that the body masses of the penguins in each group is approximately normally distributed. There is no extreme skew, extreme outliers, or extreme bimodality. 
+Histograms are a good way to assess whether data is normally distributed. The multiple histogram in figure 3 shows that the body masses of the penguins in each group are approximately normally distributed. There is no extreme skew, extreme outliers, or extreme bimodality. ANOVA is also robust to slight deviations from normality with large sample sizes, and we have large sample sizes in our data set with 151 Adelie penguins, 68 Chinstrap penguins, and 123 Gentoo penguins. 
 
 ```{r}
 # 2) Assessing equal variances
 penguin_body_mass_by_species <- group_by(penguin_body_mass, species)
 summarise(penguin_body_mass_by_species, group_variance = var(body_mass_g, na.rm = TRUE))
 ```
-The variances returned in this table are similar enough. 
 
-The assumptions of normality and equal variance are met and therefore it is appropriate to analyse this data using ANOVA. 
+**Figure 4: Table of the variance in body mass for each group**
+
+As figure 4 shows, the variances are very similar, with the largest difference being a 1.7-fold difference between the Chinstrap and Gentoo group, when ANOVA is robust to deviations from equal variance up to a ten-fold difference.
+
+Our data meets the assumptions of normality and equal variance, and therefore it is appropriate to analyse this data using ANOVA. 
 
 ### Performing linear model analysis
 
@@ -163,17 +181,25 @@ penguin_body_mass_ANOVA <- lm(body_mass_g ~ species, data = penguin_body_mass)
 ```{r}
 display(penguin_body_mass_ANOVA)
 ```
+
+**Figure 5: Table**
+
 This table tells us what the mean body mass is for each penguin species.
 
 ```{r}
 confint(penguin_body_mass_ANOVA)
 ```
 
+**Figure 6: Table**
+
 This table gives us the confidence intervals.
 
 ```{r}
 anova(penguin_body_mass_ANOVA)
 ```
+
+**Figure 7: Table**
+
 The **p-value of 2.2 x10^-16^ is < 0.05**, and therefore we can **reject the null hypothesis** that there is no difference in the mean body masses of the different penguin species. 
 
 We will now perform a Tukey-Kramer test, an unplanned comparison method, to investigate *which* of the penguin species have significantly different mean body masses. 
@@ -182,6 +208,8 @@ We will now perform a Tukey-Kramer test, an unplanned comparison method, to inve
 # Performing Tukey-Kramer unplanned comparison
 TukeyHSD(aov(penguin_body_mass_ANOVA))
 ```
+**Figure 8: Table**
+
 The p-values from this analysis show that it is only the Gentoo penguin species that has a significantly different body mass. 
 
 
@@ -193,13 +221,14 @@ data_frame <- data.frame(group = c("Adelie", "Chinstrap", "Gentoo"),
                          ymaxs = c(3774.7, 3939.9, 5260.5))
 
 ggplot(data_frame, aes(x = group, y = mean)) +
-  geom_point(size = 3, color = species_colours) +
-  geom_errorbar(aes(ymin = ymins, ymax = ymaxs), size = 1.5, color = species_colours) +
+  geom_point(aes(color = group), size = 3) +
+  geom_errorbar(aes(ymin = ymins, ymax = ymaxs, color = group), linewidth = 1.5) +
   xlab("Penguin species") + ylab("Body mass (g)") +
   scale_color_manual(values = species_colours) +
   theme_bw()
 ```
-**Figure 4: Results figure illustrating that the Gentoo penguin species has a significantly greater body mass than the Adelie and Chinstrap penguins.**
+
+**Figure 9: Results figure illustrating that the Gentoo penguin species has a significantly greater body mass than the Adelie and Chinstrap penguins.**
 
 ### Conclusion
 
@@ -211,33 +240,63 @@ We can conclude from this linear model analysis of the Palmer Penguin data that 
 
 ### a) GitHub
 
-*Upload your RProject you created for **Question 2** and any files and subfolders used to GitHub. Do not include any identifiers such as your name. Make sure your GitHub repo is public.*
+My GitHub repo link: 
 
-*GitHub link:*
+https://github.com/arabidopsis8/ReproducibleScienceAndFigures.git 
 
 *You will be marked on your repo organisation and readability.*
 
 ### b) Share your repo with a partner, download, and try to run their data pipeline.
 
-*Partner's GitHub link:*
+My partner's Github link: 
 
-*You **must** provide this so I can verify there is no plagiarism between you and your partner.*
+https://github.com/DL224/Reproducible-Figures-Assignment 
 
 ### c) Reflect on your experience running their code. (300-500 words)
 
--   *What elements of your partner's code helped you to understand their data pipeline?*
+**What elements of your partner’s code helped you to understand their data pipeline?**
 
--   *Did it run? Did you need to fix anything?*
+I could easily understand my partner’s data pipeline because the analysis was conducted in a logical order and stages divided by clear subheadings. They also used comments to title the code chunks which added to the clarity of the data pipeline. The raw data was loaded, saved, cleaned, and then the species, culmen length, and culmen depth variables were explored with a scatter graph to identify trends. Hypotheses were then formed, statistical tests run, and results visualised and discussed. Therefore overall, they had a clear and logical data pipeline. 
 
--   *What suggestions would you make for improving their code to make it more understandable or reproducible, and why?*
+**Did it run? Did you need to fix anything?**
 
--   *If you needed to alter your partner's figure using their code, do you think that would be easy or difficult, and why?*
+My partner’s code ran without any problems and I didn’t need to fix anything. 
+
+**What suggestions would you make for improving their code to make it more understandable or reproducible and why?**
+
+On the whole, they have organised their code in a way that makes it reproducible and understandable. From GitHub, I was able to download their project folder, including the .rmd file as well as the renv folder, data folder, and functions folder. This meant I had access to all the information required to run the code and obtain the same results and figures. However, there are some ways in which I think the reproducibility could have been improved even further. 
+
+They used cleaning functions which are good for improving re-usability and therefore reproducibility of code. The code for these functions is present both in the .rmd file and in the functions folder in the project. However, it would be more reproducible to only have the cleaning code stored in the cleaning.R file in the functions folder and just call the function in the .rmd file when required. This is because say my partner had made changes to the function in the .rmd file but not copied the changes into the functions folder, if I then wanted to alter a figure in their code and called the function from the cleaning.R file to do this, the function would not be the same. This could lead to an error and isn’t very reproducible. 
+
+It would also increase reproducibility to have made the plotting code into a function, especially because the code used to produce the exploratory figure and the results figure is similar. This would also mean that I would be able to download their code, but perform similar analyses with a different data set. 
+
+In terms of making the code more understandable, the main thing I would improve would be clarity in explaining the stages of ANCOVA. It would have been useful to use comments in the code chunks performing the linear model analysis explaining the stages, so that someone who is reproducing the code knows exactly what each code chunk is for. For example, I am not sure where the code chunk containing ‘summary(culmen_data)’ sits in the data pipeline. 
+
+**If you needed to alter your partner’s figure using their code, do you think that would be easy or difficult and why?**
+
+As discussed above, saving the code for the functions in the cleaning.R file only would be beneficial, but overall, I think it would be very easy to alter their code, primarily because the code for both the explanatory and results figures don’t use raw data values but instead call on objects. This means that I can easily swap objects or go to where the object is defined and adjust the code from there. 
+
 
 ### d) Reflect on your own code based on your experience with your partner's code and their review of yours. (300-500 words)
 
--   *What improvements did they suggest, and do you agree?*
+**What improvements did they suggest, and do you agree?**
 
--   *What did you learn about writing code for other people?*
+One suggested improvement was to only keep the code for the cleaning function in a file in the functions folder within my project, and just call it into my .rmd file. This would improve reproducibility because I would then only make changes to the function in the function file and would avoid the risk of having multiple copies of my function. The importance of this was highlighted to me when I ran my partner’s code, who also hadn’t done this. Therefore, next time I code, I will definitely make sure to only keep the code for the functions in a separate file. 
+
+In my data analysis I check that the data meets the assumptions required for ANOVA by using a multiple histogram to assess normality (fig.3). An improvement suggested was to supplement this with the Shapiro-Wilk test in order to reduce subjectivity. I agree that this could supplement the multiple histogram. The Shapiro-Wilk test should not be used in replacement of the graphical methods though because graphical methods allow the distribution to be visualised and an assessment be made based on knowledge of the robustness of the statistical test. I could have also plotted a normal quantile plot as it may be easier to detect deviations from normality with a normal quantile plot, where you are just looking at where the points fall along a straight line, rather than with histograms where you are simultaneously looking for bimodality, skew, and outliers. 
+
+A third improvement suggested was to include the significance score on the results figure. I agree with this, but the significance score should be represented by labelling the points “a”, “a”, “b” respectively to indicate that the Tukey-Kramer test showed that it was only the Gentoo penguin species that had a significantly different body mass. 
+
+Another improvement to the results figure I would make is improving its reproducibility by using objects rather than raw data figures for the mean and confidence intervals. This would mean that if the data set was altered up-stream it would be much easier to correct the code for this figure. My partner’s figures had reproducible code, and I could see this was beneficial. 
+
+**What did you learn about writing code for other people?**
+
+I have learnt that features that make it easier for me to work with and adjust my code (for instance using renv, saving raw and clean data sets, making functions, and trying to avoid using raw values in code) also help make my code more reproducible. It is important that, if someone downloads your code from GitHub, within the project there is everything they need to exactly reproduce the analysis if they wish. It is also important that the code also written in a way that makes it easy for them to alter figures or even use the code with a different data set. Overall, this exercise has been really useful in showing me how reproducible code is made and shared and I’m looking forward to applying what I have learnt in future code. 
 
 
 
+#### Bibliography
+
+Weissgerber, T.L., Winham, S.J., Heinzen, E.P., Milin-Lazovic, J.S., Garcia-Valencia, O., Bukumiric, Z., Savic, M.D., Garovic, A.D. et al. (2019). Reveal, Don't Conceal: Transforming Data Visualisation to Improve Transparency, *Circulation*, [Online]. doi: https://doi.org/10.1161/circulationaha.118.037777 
+
+Whitlock, M.C. and Schluter, D. (2020). *The analysis of biological data* (3rd ed). New York, Macmillan Learning

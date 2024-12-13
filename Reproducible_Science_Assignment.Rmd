@@ -97,7 +97,7 @@ Finally, I used the classic theme on ggplot2, which does not have grid lines, an
 ## QUESTION 2: Data Pipeline
 
 ### Introduction
-We have morphological data on three penguin species: *Pygoscelis adelie* (Adelie), *P. antarctica* (Chinstrap), and *P. papua* (Gentoo). We are interested in whether these three penguin species in the *Pygoscelis* genus have different body weights. 
+We have morphological data on three penguin species: *Pygoscelis adelie* (Adelie), *P. antarctica* (Chinstrap), and *P. papua* (Gentoo). We are interested in whether these three penguin species in the *Pygoscelis* genus have different body masses. 
 
 We have already cleaned our data, and so we are working with the 'penguins_clean' data
 
@@ -126,6 +126,8 @@ Fig2
 
 **Figure 2: Visualising the body mass data for the three penguin species using a violin plot**
 
+
+
 ```{r}
 # Saving the figure
 svglite("figures/fig2.svg",
@@ -136,7 +138,7 @@ dev.off()
 
 
 ### Statistical Methods
-A single-factor ANOVA will be used to compare the mean body masses of the three penguin species.
+The violin plot suggests that that the Gentoo penguin species could have a larger body mass than the Adelie and Chinstrap penguin species so a single-factor ANOVA will be used to compare the mean body masses of the three penguin species.
 
 ANOVA is a linear model and so linear model analysis will be performed using the `lm()` function. `anova()` will then be used to assess the output. 
 
@@ -192,14 +194,14 @@ penguin_body_mass_ANOVA <- lm(body_mass_g ~ species, data = penguin_body_mass)
 ```{r}
 display(penguin_body_mass_ANOVA)
 ```
-**Figure 5: Table showing the coefficient estimates for the three penguin species.**
+**Figure 5: Table showing the coefficient estimates for the three penguin species. The estimates of the population means will be used later when displaying the results**
 
 
 ```{r}
 confint(penguin_body_mass_ANOVA)
 ```
 
-**Figure 6: Table showing the confidence intervals for the mean body mass of each penguin species.**
+**Figure 6: Table showing the 95% confidence intervals for the mean body mass of each penguin species. These confidence intervals will be used later when displaying the results.**
 
 
 ```{r}
@@ -212,24 +214,28 @@ The ANOVA table shows that the **p-value = 2.2 x10^-16^.** This is **< 0.05**, a
 
 We will now perform a Tukey-Kramer test, an unplanned comparison method, to investigate *which* of the penguin species have significantly different mean body masses. 
 
+The Tukey-Kramer test also assumes that the variable is normally distributed in each group and the variances are the same, but it is not robust to violations of assumptions. Our data is approximately normally distributed and variances are very similar (within 1.7-fold difference) so it is appropriate to use this test. 
+
 ```{r}
 # Performing Tukey-Kramer unplanned comparison
 TukeyHSD(aov(penguin_body_mass_ANOVA))
 ```
 **Figure 8: Tukey-Kramer results table**
 
-The p-values from this analysis show that it is only the Gentoo penguin species that has a significantly different body mass. 
+The p-values from this analysis show that it is only the Gentoo penguin species that has a significantly different body mass; the p-values for the the Gentoo-Adelie and Gentoo-Chinstrap difference in means is 0 which is <0.05 and thus shows that these pairs of species have a significantly different mean body mass. However, the p-value for the Chinstrap-Adelie difference in means is 0.88 which is >0.05, and thus there is no significant difference in their mean body masses. 
 
 
 ```{r Plotting Results}
 # Plotting results figure
 data_frame <- data.frame(group = c("Adelie", "Chinstrap", "Gentoo"),
-                         mean = c(3700.66, 3733.09, 5076.01),
-                         ymins = c(3626.7, 3526.3, 4891.6),
-                         ymaxs = c(3774.7, 3939.9, 5260.5))
+                         mean = c(3700.66, 3733.09, 5076.01), # From coefficient estimates (fig5)
+                         ymins = c(3626.7, 3526.3, 4891.6),   # From confidence intervals (fig6)
+                         ymaxs = c(3774.7, 3939.9, 5260.5),   # From confidence intervals (fig6)
+                         symbols = c("a", "a", "b"))          
 
 Fig9 <- ggplot(data_frame, aes(x = group, y = mean)) +
   geom_point(aes(color = group), size = 3) +
+  geom_text(aes(label = symbols), position = position_nudge(x = -0.2)) +
   geom_errorbar(aes(ymin = ymins, ymax = ymaxs, color = group), linewidth = 1.5) +
   xlab("Penguin species") + ylab("Body mass (g)") +
   scale_color_manual(values = species_colours) +
@@ -238,7 +244,7 @@ Fig9
 
 ```
 
-**Figure 9: Results figure illustrating that the Gentoo penguin species has a significantly greater body mass than the Adelie and Chinstrap penguins.**
+**Figure 9: Results figure with estimated means and their confidence intervals, illustrating that the Gentoo penguin species has a significantly greater body mass than the Adelie and Chinstrap penguins.**
 
 ```{r}
 # Saving the figure
@@ -251,7 +257,7 @@ dev.off()
 
 ### Conclusion
 
-We can conclude from this linear model analysis of the Palmer Penguin data that there are differences in body mass among the penguin species in the *Pygoscelis* genus. The Gentoo penguin (*P. papua*) has a significantly greater body mass than the Adelie and Chinstrap penguins. The body masses of the Adelie and Chinstrap penguins however are not significantly different. This fits with the pattern seen in the exploratory violin plot, however we needed to conduct a single-factor ANOVA because the sample of Penguins in the Palmer Penguin data set will differ from the population by chance. 
+We can conclude from this linear model analysis of the Palmer Penguin data that there are differences in body mass among the penguin species in the *Pygoscelis* genus. The p-values from the Tukey-Kramer test showed that the Gentoo penguin (*P. papua*) has a significantly greater body mass than the Adelie and Chinstrap penguins. The body masses of the Adelie and Chinstrap penguins however are not significantly different. The confidence intervals, shown in figure 9 also support this conclusion because the confidence intervals for the estimates of the Adelie and Chinstrap population means overlap with each other but do not overlap with the Gentoo penguin confidence interval. This is represented by the symbols next to the estimated means on figure 9: Adelie and Chinstrap estimated population means are represented with "a" and the Gentoo estimated population mean is represented with "b" because it is significantly different. 
 
 ------------------------------------------------------------------------
 
@@ -300,11 +306,11 @@ As discussed above, saving the code for the functions in the cleaning.R file onl
 
 **What improvements did they suggest, and do you agree?**
 
-One suggested improvement was to only keep the code for the cleaning function in a file in the functions folder within my project, and just call it into my .rmd file. This would improve reproducibility because I would then only make changes to the function in the function file and would avoid the risk of having multiple copies of my function. The importance of this was highlighted to me when I ran my partner’s code, who also hadn’t done this. Therefore, next time I code, I will definitely make sure to only keep the code for the functions in a separate file. 
+One suggested improvement was to only keep the code for the cleaning function in a file in the functions folder within my project, and just call it into my .rmd file. This would improve reproducibility because I would then only make changes to the function in the function file and would avoid the risk of having multiple copies of my function. I would have done this if I was using the same cleaning code multiple times within this project, but still next time I will definitely make sure to only keep the code for the functions in a separate file. 
 
-In my data analysis I check that the data meets the assumptions required for ANOVA by using a multiple histogram to assess normality (fig.3). An improvement suggested was to supplement this with the Shapiro-Wilk test in order to reduce subjectivity. I agree that this could supplement the multiple histogram. The Shapiro-Wilk test should not be used in replacement of the graphical methods though because graphical methods allow the distribution to be visualised and an assessment be made based on knowledge of the robustness of the statistical test. I could have also plotted a normal quantile plot as it may be easier to detect deviations from normality with a normal quantile plot, where you are just looking at where the points fall along a straight line, rather than with histograms where you are simultaneously looking for bimodality, skew, and outliers. 
+In my data analysis I check that the data meets the assumptions required for ANOVA by using a multiple histogram to assess normality (fig.3). An improvement suggested was to supplement this with the Shapiro-Wilk test in order to reduce subjectivity. I agree that this could supplement the multiple histogram but the Shapiro-Wilk test should not be used in replacement of the graphical methods though because graphical methods allow the distribution to be visualised and an assessment be made based on knowledge of the robustness of the statistical test. I could have also plotted a normal quantile plot as it may be easier to detect deviations from normality with a normal quantile plot, where you are just looking at where the points fall along a straight line, rather than with histograms where you are simultaneously looking for bimodality, skew, and outliers. 
 
-A third improvement suggested was to include the significance score on the results figure. I agree with this, but the significance score should be represented by labelling the points “a”, “a”, “b” respectively to indicate that the Tukey-Kramer test showed that it was only the Gentoo penguin species that had a significantly different body mass. 
+A third improvement suggested was to include the significance score on the results figure. I was planning on (and have done) this but I sent my code to my partner earlier so the respective “a”, “a”, “b” labels were not present when they reviewed my code. The symbols display the results of the Tukey-Kramer test that it was only the Gentoo penguin species that had a significantly different body mass. 
 
 Another improvement to the results figure I would make is improving its reproducibility by using objects rather than raw data figures for the mean and confidence intervals. This would mean that if the data set was altered up-stream it would be much easier to correct the code for this figure. My partner’s figures had reproducible code, and I could see this was beneficial. 
 
